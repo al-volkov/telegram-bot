@@ -13,7 +13,7 @@ class ModelWrapper:
         model_dict = torch.load(os.path.join("model", "final.model"))
         model_dict_clone = model_dict.copy()
         for key, value in model_dict_clone.items():
-            if key.endswith(('running_mean', 'running_var')):
+            if key.endswith(("running_mean", "running_var")):
                 del model_dict[key]
         style_model.load_state_dict(model_dict, False)
         self.model = style_model
@@ -38,12 +38,12 @@ class ModelWrapper:
         (b, g, r) = torch.chunk(tensor, 3)
         tensor = torch.cat((r, g, b))
         img = tensor.clone().clamp(0, 255).numpy()
-        img = img.transpose(1, 2, 0).astype('uint8')
+        img = img.transpose(1, 2, 0).astype("uint8")
         img = Image.fromarray(img)
         img = img.resize((original_width, original_height))
         bytes = BytesIO()
-        bytes.name = 'result.jpeg'
-        img.save(bytes, 'JPEG')
+        bytes.name = "result.jpeg"
+        img.save(bytes, "JPEG")
         bytes.seek(0)
         return bytes
 

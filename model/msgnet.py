@@ -9,12 +9,16 @@ class GramMatrix(nn.Module):
         batch_size, channels, height, width = input.shape
         features = input.view(batch_size, channels, height * width)
         features_transposed = features.transpose(1, 2)
-        gram_matrix = torch.bmm(features, features_transposed).div(channels * height * width)
+        gram_matrix = torch.bmm(features, features_transposed).div(
+            channels * height * width
+        )
         return gram_matrix
 
 
 class ConvLayer(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int, stride: int) -> None:
+    def __init__(
+        self, in_channels: int, out_channels: int, kernel_size: int, stride: int
+    ) -> None:
         super().__init__()
         reflection_padding = int(np.floor(kernel_size / 2))
         self.reflection_pad = nn.ReflectionPad2d(reflection_padding)
@@ -27,8 +31,14 @@ class ConvLayer(torch.nn.Module):
 
 
 class UpsampleConvLayer(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int, stride: int,
-                 upsample: float = None) -> None:
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        stride: int,
+        upsample: float = None,
+    ) -> None:
         super(UpsampleConvLayer, self).__init__()
         self.upsample = upsample
         if upsample:
@@ -48,14 +58,22 @@ class UpsampleConvLayer(torch.nn.Module):
 
 
 class ResidualBlock(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, stride: int = 1, expansion: int = 4,
-                 downsample: bool = False,
-                 norm_layer=nn.BatchNorm2d) -> None:
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        stride: int = 1,
+        expansion: int = 4,
+        downsample: bool = False,
+        norm_layer=nn.BatchNorm2d,
+    ) -> None:
         super().__init__()
         self.expansion = expansion
         self.downsample = downsample
         if self.downsample:
-            self.residual_layer = nn.Conv2d(in_channels, out_channels * self.expansion, kernel_size=1, stride=stride)
+            self.residual_layer = nn.Conv2d(
+                in_channels, out_channels * self.expansion, kernel_size=1, stride=stride
+            )
         self.conv_block = nn.Sequential(
             norm_layer(in_channels),
             nn.ReLU(inplace=True),
@@ -65,7 +83,7 @@ class ResidualBlock(nn.Module):
             ConvLayer(out_channels, out_channels, kernel_size=3, stride=stride),
             norm_layer(out_channels),
             nn.ReLU(inplace=True),
-            nn.Conv2d(out_channels, out_channels * self.expansion, kernel_size=1)
+            nn.Conv2d(out_channels, out_channels * self.expansion, kernel_size=1),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -75,22 +93,35 @@ class ResidualBlock(nn.Module):
 
 
 class UpsampleResidualBlock(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, stride: int = 2, expansion: int = 4,
-                 norm_layer=nn.BatchNorm2d) -> None:
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        stride: int = 2,
+        expansion: int = 4,
+        norm_layer=nn.BatchNorm2d,
+    ) -> None:
         super().__init__()
         self.expansion = expansion
-        self.residual_layer = UpsampleConvLayer(in_channels, out_channels * self.expansion,
-                                                kernel_size=1, stride=1, upsample=stride)
+        self.residual_layer = UpsampleConvLayer(
+            in_channels,
+            out_channels * self.expansion,
+            kernel_size=1,
+            stride=1,
+            upsample=stride,
+        )
         self.conv_block = nn.Sequential(
             norm_layer(in_channels),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels, out_channels, kernel_size=1),
             norm_layer(out_channels),
             nn.ReLU(inplace=True),
-            UpsampleConvLayer(out_channels, out_channels, kernel_size=3, stride=1, upsample=stride),
+            UpsampleConvLayer(
+                out_channels, out_channels, kernel_size=3, stride=1, upsample=stride
+            ),
             norm_layer(out_channels),
             nn.ReLU(inplace=True),
-            nn.Conv2d(out_channels, out_channels * self.expansion, kernel_size=1)
+            nn.Conv2d(out_channels, out_channels * self.expansion, kernel_size=1),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -117,8 +148,10 @@ class CoMatch(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # input x is a 3D feature map
         self.product = torch.bmm(self.weight.expand_as(self.gram), self.gram)
-        return torch.bmm(self.product.transpose(1, 2).expand(x.size(0), self.shape, self.shape),
-                         x.view(x.size(0), x.size(1), -1)).view_as(x)
+        return torch.bmm(
+            self.product.transpose(1, 2).expand(x.size(0), self.shape, self.shape),
+            x.view(x.size(0), x.size(1), -1),
+        ).view_as(x)
 
     def __repr__(self):
         return self.__class__.__name__ + f"(N x {self.shape})"
@@ -126,10 +159,16 @@ class CoMatch(nn.Module):
 
 class MSGNet(nn.Module):
     # ngf - number of generator filter channels
-    def __init__(self, input_nc: int = 3, output_nc: int = 3, ngf: int = 128, expansion: int = 4,
-                 norm_layer=nn.InstanceNorm2d,
-                 n_blocks: int = 6,
-                 gpu_ids: List = None):
+    def __init__(
+        self,
+        input_nc: int = 3,
+        output_nc: int = 3,
+        ngf: int = 128,
+        expansion: int = 4,
+        norm_layer=nn.InstanceNorm2d,
+        n_blocks: int = 6,
+        gpu_ids: List = None,
+    ):
         super().__init__()
         if gpu_ids is not None:
             self.gpu_ids = gpu_ids
@@ -140,11 +179,15 @@ class MSGNet(nn.Module):
         self.expansion = expansion
         self.norm_layer = norm_layer
 
-        self.model1 = nn.Sequential(ConvLayer(input_nc, 64, kernel_size=7, stride=1),
-                                    norm_layer(64),
-                                    nn.ReLU(inplace=True),
-                                    ResidualBlock(64, 32, 2, self.expansion, True, self.norm_layer),
-                                    ResidualBlock(32 * self.expansion, ngf, 2, self.expansion, True, self.norm_layer))
+        self.model1 = nn.Sequential(
+            ConvLayer(input_nc, 64, kernel_size=7, stride=1),
+            norm_layer(64),
+            nn.ReLU(inplace=True),
+            ResidualBlock(64, 32, 2, self.expansion, True, self.norm_layer),
+            ResidualBlock(
+                32 * self.expansion, ngf, 2, self.expansion, True, self.norm_layer
+            ),
+        )
 
         model = []
         self.co_match = CoMatch(ngf * self.expansion)
@@ -152,13 +195,23 @@ class MSGNet(nn.Module):
         model.append(self.co_match)
 
         for i in range(n_blocks):
-            model.append(ResidualBlock(ngf * self.expansion, ngf, 1, self.expansion, False, self.norm_layer))
+            model.append(
+                ResidualBlock(
+                    ngf * self.expansion, ngf, 1, self.expansion, False, self.norm_layer
+                )
+            )
 
-        model += [UpsampleResidualBlock(ngf * self.expansion, 32, 2, self.expansion, self.norm_layer),
-                  UpsampleResidualBlock(32 * self.expansion, 16, 2, self.expansion, self.norm_layer),
-                  norm_layer(16 * self.expansion),
-                  nn.ReLU(inplace=True),
-                  ConvLayer(16 * self.expansion, output_nc, kernel_size=7, stride=1)]
+        model += [
+            UpsampleResidualBlock(
+                ngf * self.expansion, 32, 2, self.expansion, self.norm_layer
+            ),
+            UpsampleResidualBlock(
+                32 * self.expansion, 16, 2, self.expansion, self.norm_layer
+            ),
+            norm_layer(16 * self.expansion),
+            nn.ReLU(inplace=True),
+            ConvLayer(16 * self.expansion, output_nc, kernel_size=7, stride=1),
+        ]
 
         self.model = nn.Sequential(*model)
 

@@ -7,8 +7,9 @@ from aiogram.filters.command import Command
 from aiogram.types import BufferedInputFile
 from PIL import Image
 from model.model_wrapper import ModelWrapper
+
 logging.basicConfig(level=logging.INFO)
-bot = Bot(token=os.environ.get('TG_BOT_TOKEN'))
+bot = Bot(token=os.environ.get("TG_BOT_TOKEN"))
 dp = Dispatcher()
 
 user_data = {}
@@ -42,18 +43,17 @@ async def cmd_start(message: types.Message):
     if message.chat.id not in user_data:
         user_data[message.chat.id] = User()
     await message.answer(
-        f"Привет, {message.from_user.first_name}!\n\nЭтот бот позволяет вам переносить стиль с одной картинки на другую.\n\n" +
-        "Для отправки стилевого изображения используйте /select_style.\n\n" +
-        "Далее можно использовать /transfer_style для стилизации изображения.\n")
-
+        f"Привет, {message.from_user.first_name}!\n\nЭтот бот позволяет вам переносить стиль с одной картинки на другую.\n\n"
+        + "Для отправки стилевого изображения используйте /select_style.\n\n"
+        + "Далее можно использовать /transfer_style для стилизации изображения.\n"
+    )
 
 
 @dp.message(Command("select_style"))
 async def cmd_select_style(message: types.Message):
     if message.chat.id not in user_data:
         user_data[message.chat.id] = User()
-    await message.answer(
-        "Отправьте стилевое изображение.")
+    await message.answer("Отправьте стилевое изображение.")
     user_data[message.chat.id].wait_for_style()
 
 
@@ -62,10 +62,11 @@ async def cmd_transfer_style(message: types.Message):
     if message.chat.id not in user_data:
         user_data[message.chat.id] = User()
     if user_data[message.chat.id].style_image is None:
-        await message.answer("Для начала необходимо отправить стилистическое изображение.")
-    else:
         await message.answer(
-            "Отправьте изображение, которое надо стилизовать.")
+            "Для начала необходимо отправить стилистическое изображение."
+        )
+    else:
+        await message.answer("Отправьте изображение, которое надо стилизовать.")
         user_data[message.chat.id].wait_for_content()
 
 
@@ -85,7 +86,9 @@ async def get_image(message: types.Message):
     else:
         user_data[message.chat.id].set_style(image)
         user_data[message.chat.id].wait_for_content()
-        await message.answer("Теперь отправьте изображение, на которое нужно перенести стиль.")
+        await message.answer(
+            "Теперь отправьте изображение, на которое нужно перенести стиль."
+        )
 
 
 async def main():
